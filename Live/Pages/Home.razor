@@ -1,0 +1,112 @@
+﻿@page "/"
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<PageTitle>Live Monitor</PageTitle>
+
+<main class="monitor-shell">
+    <header class="monitor-header">
+        <div>
+            <p class="eyebrow">WEBMONITOR</p>
+            <h1>Hold øje med dine websider</h1>
+            <p class="intro">Mål oppetid og svartider direkte fra din browser.</p>
+        </div>
+        <div class="clock-card" aria-live="polite">
+            <span class="clock-label">Lokal tid</span>
+            <strong id="live-clock">--</strong>
+        </div>
+    </header>
+
+    <section class="monitor-grid" aria-label="Webside monitor">
+        <div class="panel add-panel">
+            <div class="panel-heading">
+                <div>
+                    <p class="eyebrow">NYT MÅLEPUNKT</p>
+                    <h2>Tilføj webside</h2>
+                </div>
+                <span class="status-dot status-dot-idle"></span>
+            </div>
+            <form id="monitor-form" class="monitor-form">
+                <label for="monitor-name">Navn</label>
+                <input id="monitor-name" name="name" type="text" placeholder="Min hjemmeside" required maxlength="80" />
+                <label for="monitor-url">URL</label>
+                <input id="monitor-url" name="url" type="url" placeholder="https://example.com" required />
+                <label for="monitor-interval">Måleinterval</label>
+                <select id="monitor-interval" name="interval">
+                    <option value="1">Hvert sekund</option>
+                    <option value="2">Hvert 2. sekund</option>
+                    <option value="5">Hvert 5. sekund</option>
+                    <option value="10">Hvert 10. sekund</option>
+                    <option value="30" selected>Hvert 30. sekund</option>
+                    <option value="60">Hvert minut</option>
+                    <option value="300">Hvert 5. minut</option>
+                    <option value="900">Hvert 15. minut</option>
+                </select>
+                <button class="primary-button" type="submit">Tilføj målepunkt</button>
+                <p id="form-message" class="form-message" role="status"></p>
+            </form>
+            <div class="privacy-note">Målinger gemmes lokalt i din browser med IndexedDB.</div>
+        </div>
+
+        <div class="panel overview-panel">
+            <div class="panel-heading overview-heading">
+                <div>
+                    <p class="eyebrow">OVERSIGT</p>
+                    <h2>Aktuel status</h2>
+                </div>
+                <button id="download-csv" class="secondary-button" type="button">Download CSV</button>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card"><span>Websider</span><strong id="total-monitors">0</strong></div>
+                <div class="stat-card"><span>Online nu</span><strong id="online-monitors">0</strong></div>
+                <div class="stat-card"><span>Gns. svartid</span><strong id="average-response">--</strong></div>
+            </div>
+            <div id="monitor-table" class="monitor-table" aria-label="Målepunkter"></div>
+            <div id="empty-state" class="empty-state">Tilføj din første webside for at begynde at måle.</div>
+        </div>
+
+        <div class="panel chart-panel">
+            <div class="panel-heading">
+                <div>
+                    <p class="eyebrow">HISTORIK</p>
+                    <h2>Oppetid og svartider</h2>
+                </div>
+                <div class="history-actions">
+                    <span id="chart-range" class="muted-label">Seneste målinger</span>
+                    <button id="clear-measurements" class="danger-button" type="button">Slet alle målinger</button>
+                    <div class="view-switch" role="group" aria-label="Vælg historikvisning">
+                        <button id="chart-view-button" class="view-button is-active" type="button" data-view="chart" aria-pressed="true">Graf</button>
+                        <button id="data-view-button" class="view-button" type="button" data-view="data" aria-pressed="false">Data</button>
+                    </div>
+                </div>
+            </div>
+            <div id="chart-view" class="history-view">
+                <div class="chart-wrap"><canvas id="monitor-chart"></canvas></div>
+            </div>
+            <div id="data-view" class="history-view" hidden>
+                <div id="measurement-table" class="measurement-table" aria-label="Målte værdier"></div>
+            </div>
+        </div>
+    </section>
+</main>
+
+@code {
+    private bool _started;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _started = true;
+            await JS.InvokeVoidAsync("LiveMonitorApp.start");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_started)
+        {
+            await JS.InvokeVoidAsync("LiveMonitorApp.stop");
+        }
+    }
+}
